@@ -38,24 +38,31 @@ parser.add_argument("irm_file", help="IRM tif file")
 parser.add_argument(
     "-o",
     "--output-directory",
-    default="./",
-    help="Output directory (will be created if it doesn't exist)",
+    default="output",
+    help="Output directory. Default=output/",
 )
 parser.add_argument(
     "-m", "--transform-matrix", help="Previously calculated matrix in .json format"
 )
-parser.add_argument("-f", "--fit_method", default="lq", help="Fit method for picasso")
-parser.add_argument("-b", "--box_size", default=21, help="Box sized for picasso")
 parser.add_argument(
-    "-g", "--min_gradient", default=70000, help="Minimum gradient for picasso"
+    "-f", "--fit_method", default="lq", help="Fit method for picasso.  Default=lq"
+)
+parser.add_argument(
+    "-b", "--box_size", default=21, help="Box sized for picasso. Default=21"
+)
+parser.add_argument(
+    "-g",
+    "--min_gradient",
+    default=70000,
+    help="Minimum gradient for picasso. Default=70000",
 )
 parser.add_argument(
     "-e",
     "--max_pos_error",
     default=3.5,
-    help="Maximum standard dev accepted for x and y position of spots",
+    help="Maximum standard dev accepted for x and y position of spots. Default=3.5",
 )
-parser.add_argument("-p", "--max_photons", help="Maximum number of photons spots")
+parser.add_argument("-p", "--max_photons", help="Maximum number of photons for spots.")
 
 
 args = parser.parse_args()
