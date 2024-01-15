@@ -12,7 +12,7 @@ import os
 from cv2 import warpAffine, invertAffineTransform
 from pathlib import Path
 from cv2 import estimateAffine2D, estimateAffinePartial2D
-from picasso import io, postprocess
+from picasso import io
 import json
 from json import JSONEncoder
 import argparse
@@ -54,25 +54,31 @@ parser.add_argument(
     "-m", "--transform-matrix", help="Previously calculated matrix in .json format"
 )
 parser.add_argument(
-    "-f", "--fit_method", default="lq", help="Fit method for picasso.  Default=lq"
+    "-f", "--fit-method", default="lq", help="Fit method for picasso.  Default=lq"
 )
 parser.add_argument(
-    "-b", "--box_size", default=21, help="Box sized for picasso. Default=21"
+    "-b", "--box-size", default=21, help="Box sized for picasso. Default=21"
 )
 parser.add_argument(
     "-g",
-    "--min_gradient",
+    "--min-gradient",
     default=70000,
     help="Minimum gradient for picasso. Default=70000",
 )
 parser.add_argument(
     "-e",
-    "--max_pos_error",
+    "--max-pos-error",
     default=3.5,
     help="Maximum standard dev accepted for x and y position of spots. Default=3.5",
 )
 parser.add_argument("-p", "--max_photons", help="Maximum number of photons for spots.")
 
+parser.add_argument(
+    "-d",
+    "--delete-temp-files",
+    default=True,
+    help="Delete temporary files made by picasso",
+)
 
 args = parser.parse_args()
 
@@ -126,7 +132,7 @@ print(wt_roi)
 irm_metadata = irm._tiff_image_metadata()
 irm_roi = irm_metadata[
     "Region of interest (x, y, width, height)"
-]  # This is different because the wt was prexviously aligned I think. Can this cause issues?
+]  # This is different because the wt was previously aligned I think. Can this cause issues?
 print(irm_roi)
 
 # %%
@@ -147,13 +153,12 @@ tifffile.imwrite(output_path + padded_irm_filename, irm_g_padded)
 
 # %%
 
-
 transform_mat = []  # set to empty to check afterwards if I have a matrix
 
 if args.transform_matrix:  # If I have provided a matrix, use that
     with open(args.transform_matrix, "r") as read_file:
         decodedArray = json.load(read_file)
-        transform_mat = np.asarray(decodedArray["transform matrix"])
+        transform_mat = np.asarray(decodedArray["transform_matrix"])
         rmsd = decodedArray["rmsd"]
 
 # %%
@@ -264,17 +269,20 @@ else:  # if matrix wasnt provided, calculate it
         )  # calculate RMSD
 
         numpyData = {
-            "transform matrix": transform_mat,
+            "transform_matrix": transform_mat,
             "rmsd": rmsd,
+            "wt_file": args.wt_file,
+            "irm_file": args.irm_file,
         }  # Write transform matrix and rmsd to file
         with open(output_path + "transform_matrix.json", "w") as write_file:
             json.dump(numpyData, write_file, cls=NumpyArrayEncoder)
 
         # Remove files created during localization
-        os.remove(wt_locs_path)
-        os.remove(irm_locs_path)
-        os.remove(output_path + Path(wt_locs_path).stem + ".yaml")
-        os.remove(output_path + Path(irm_locs_path).stem + ".yaml")
+        if args.delete_temp_files:
+            os.remove(wt_locs_path)
+            os.remove(irm_locs_path)
+            os.remove(output_path + Path(wt_locs_path).stem + ".yaml")
+            os.remove(output_path + Path(irm_locs_path).stem + ".yaml")
 
         # %%
         # Plot aligned points
@@ -321,5 +329,8 @@ if len(transform_mat) != 0:  # If I have a matrix either from file or calculated
 
     # %%
     # delete padded files
-    os.remove(output_path + padded_irm_filename)
-    os.remove(output_path + padded_wt_filename)
+
+    if args.delete_temp_files:
+        # delete leftover files
+        os.remove(output_path + padded_irm_filename)
+        os.remove(output_path + padded_wt_filename)
