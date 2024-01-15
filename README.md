@@ -2,6 +2,7 @@
 Scripts to align various channels based on reference beads. 
 
 ##Installation
+
 First create the conda environment
 >conda env create --name <environment_name> -f image_aligner_env.yml
 then activate it
@@ -12,6 +13,7 @@ and then install picasso
 >pip install picassosr
 
 ##Running the script
+
 Remember to first activate the environment
 
 >conda activate <environment_name>
