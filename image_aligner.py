@@ -254,7 +254,7 @@ else:  # if matrix wasnt provided, calculate it
 # %%
 
 # %%
-if transform_mat != []:  # If I have a matrix either from file or calculated
+if len(transform_mat) != 0:  # If I have a matrix either from file or calculated
     irm_g_padded_warped = warpAffine(
         irm_g_padded, transform_mat, (wt_g_padded.shape[1], wt_g_padded.shape[0])
     )
