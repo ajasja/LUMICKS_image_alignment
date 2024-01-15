@@ -5,7 +5,9 @@ Scripts to align various channels based on reference beads.
 
 First create the conda environment
 >conda env create --name <environment_name> -f image_aligner_env.yml
+
 then activate it
+
 >conda activate <environment_name>
 
 and then install picasso
