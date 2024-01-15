@@ -12,7 +12,7 @@ import os
 from cv2 import warpAffine, invertAffineTransform
 from pathlib import Path
 from cv2 import estimateAffine2D, estimateAffinePartial2D
-from picasso import io, postprocess
+from picasso import io
 import json
 from json import JSONEncoder
 import argparse
@@ -45,44 +45,43 @@ parser.add_argument(
     "-m", "--transform-matrix", help="Previously calculated matrix in .json format"
 )
 parser.add_argument(
-    "-f", "--fit_method", default="lq", help="Fit method for picasso.  Default=lq"
+    "-f", "--fit-method", default="lq", help="Fit method for picasso.  Default=lq"
 )
 parser.add_argument(
-    "-b", "--box_size", default=21, help="Box sized for picasso. Default=21"
+    "-b", "--box-size", default=21, help="Box sized for picasso. Default=21"
 )
 parser.add_argument(
     "-g",
-    "--min_gradient",
+    "--min-gradient",
     default=70000,
     help="Minimum gradient for picasso. Default=70000",
 )
 parser.add_argument(
     "-e",
-    "--max_pos_error",
+    "--max-pos-error",
     default=3.5,
     help="Maximum standard dev accepted for x and y position of spots. Default=3.5",
 )
 parser.add_argument("-p", "--max_photons", help="Maximum number of photons for spots.")
 
+parser.add_argument(
+    "-d",
+    "--delete-temp-files",
+    default=True,
+    help="Delete temporary files made by picasso",
+)
 
 args = parser.parse_args()
 
 irm_path = args.irm_file
 wt_path = args.wt_file
-output_path = (
-    args.output_directory + "/"
-)  # The trailing slash is in case it wasn't added by the user
-
+output_path = args.output_directory + "/" # The trailing slash is in case it wasn't added by the user
 
 # %%
 
-# Check if the directory already exists
-if not os.path.exists(output_path):
-    # Create the directory
-    os.makedirs(output_path)
-    print("Output directory created successfully!")
-else:
-    print("Output directory already exists")
+# Make output dir
+os.makedirs(output_path, exist_ok=True)
+
 
 # %%
 
@@ -110,9 +109,7 @@ wt_roi = wt_metadata["Alignment region of interest (x, y, width, height)"]
 print(wt_roi)
 
 irm_metadata = irm._tiff_image_metadata()
-irm_roi = irm_metadata[
-    "Region of interest (x, y, width, height)"
-]  # This is different because the wt was previously aligned I think. Can this cause issues?
+irm_roi = irm_metadata["Region of interest (x, y, width, height)"]  # This is different because the wt was previously aligned I think. Can this cause issues?
 print(irm_roi)
 
 # %%
@@ -128,13 +125,12 @@ tifffile.imwrite(output_path + "irm_padded.tif", irm_g_padded)
 
 # %%
 
-
 transform_mat = []  # set to empty to check afterwards if I have a matrix
 
 if args.transform_matrix:  # If I have provided a matrix, use that
     with open(args.transform_matrix, "r") as read_file:
         decodedArray = json.load(read_file)
-        transform_mat = np.asarray(decodedArray["transform matrix"])
+        transform_mat = np.asarray(decodedArray["transform_matrix"])
         rmsd = decodedArray["rmsd"]
 
 # %%
@@ -240,8 +236,10 @@ else:  # if matrix wasnt provided, calculate it
         )  # calculate RMSD
 
         numpyData = {
-            "transform matrix": transform_mat,
+            "transform_matrix": transform_mat,
             "rmsd": rmsd,
+            "wt_file" : args.wt_file,
+            "irm_file" : args.irm_file
         }  # Write transform matrix and rmsd to file
         with open(output_path + "transform_matrix.json", "w") as write_file:
             json.dump(numpyData, write_file, cls=NumpyArrayEncoder)
@@ -279,12 +277,14 @@ if len(transform_mat) != 0:  # If I have a matrix either from file or calculated
     # %%
 
     # %%
-    # delete leftover files
-    list_of_output_files = os.listdir(output_path)
-    for file in list_of_output_files:
-        if (
-            file.endswith(".hdf5")
-            or file.endswith(".yaml")
-            or file.endswith("_padded.tif")
-        ):
-            os.remove(os.path.join(output_path, file))
+    
+    if args.delete_temp_files:
+        # delete leftover files
+        list_of_output_files = os.listdir(output_path)
+        for file in list_of_output_files:
+            if (
+                file.endswith(".hdf5")
+                or file.endswith(".yaml")
+                or file.endswith("_padded.tif")
+            ):
+                os.remove(os.path.join(output_path, file))
