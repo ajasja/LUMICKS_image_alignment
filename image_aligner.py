@@ -21,6 +21,15 @@ import math
 import subprocess
 
 
+def norm_image(image, inverse=False):
+    amin = image.min()
+    amax = image.max()
+    if inverse:
+        return 1 - (image - amin) / (amax - amin)
+    else:
+        return (image - amin) / (amax - amin)
+
+
 class NumpyArrayEncoder(JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
@@ -77,19 +86,24 @@ output_path = (
 # %%
 
 # Check if the directory already exists
-if not os.path.exists(output_path):
-    # Create the directory
-    os.makedirs(output_path)
-    print("Output directory created successfully!")
-else:
-    print("Output directory already exists")
-
+os.makedirs(output_path, exist_ok=True)
 # %%
 
+# rename tiff to tif files
+if irm_path.endswith(".tiff"):
+    print(irm_path)
+    os.rename(irm_path, irm_path[:-1])
+    irm_path = irm_path[:-1]
+if wt_path.endswith(".tiff"):
+    print(wt_path)
+    os.rename(wt_path, wt_path[:-1])
+    wt_path = wt_path[:-1]
+
+# %%
 irm = lk.ImageStack(irm_path)  # Loading a stack.
 wt = lk.ImageStack(wt_path)  # Loading a stack.
 wt.export_tiff(
-    output_path + os.path.basename(wt_path) + "_aligned.tif"
+    output_path + Path(wt_path).stem + "_aligned.tif"
 )  # Save aligned wt stack
 
 
@@ -112,18 +126,23 @@ print(wt_roi)
 irm_metadata = irm._tiff_image_metadata()
 irm_roi = irm_metadata[
     "Region of interest (x, y, width, height)"
-]  # This is different because the wt was previously aligned I think. Can this cause issues?
+]  # This is different because the wt was prexviously aligned I think. Can this cause issues?
 print(irm_roi)
 
 # %%
-# Pad both images to region of interest
+# Padding is CANCELED. Once this is all working flawlessly I should fix the code to remove references to padding
 
-wt_g_padded = np.pad(wt_g, [(int(wt_roi[0]), 0), (int(wt_roi[1]), 0)])
-tifffile.imwrite(output_path + "wt_padded.tif", wt_g_padded)
+padded_wt_filename = Path(wt_path).stem + "_padded.tif"
+# wt_g_padded = np.pad(wt_g, [(int(wt_roi[0]), 0), (int(wt_roi[1]), 0)])
+wt_g_padded = wt_g
+
+tifffile.imwrite(output_path + padded_wt_filename, wt_g_padded)
 # plt.imshow(wt_g_padded)
 
+padded_irm_filename = Path(irm_path).stem + "_padded.tif"
 irm_g_padded = np.pad(irm_g, [(int(irm_roi[0]), 0), (int(irm_roi[1]), 0)])
-tifffile.imwrite(output_path + "irm_padded.tif", irm_g_padded)
+irm_g_padded = irm_g
+tifffile.imwrite(output_path + padded_irm_filename, irm_g_padded)
 # plt.imshow(irm_g_padded)
 
 # %%
@@ -142,7 +161,8 @@ else:  # if matrix wasnt provided, calculate it
     run_string = (
         "python -m picasso localize "
         + output_path
-        + "wt_padded.tif --fit-method "
+        + padded_wt_filename
+        + " --fit-method "
         + args.fit_method
         + " -b "
         + str(args.box_size)
@@ -154,7 +174,8 @@ else:  # if matrix wasnt provided, calculate it
     run_string = (
         "python -m picasso localize "
         + output_path
-        + "irm_padded.tif --fit-method "
+        + padded_irm_filename
+        + " --fit-method "
         + args.fit_method
         + " -b "
         + str(args.box_size)
@@ -166,8 +187,11 @@ else:  # if matrix wasnt provided, calculate it
     #!python -m picasso localize {output_path}irm_padded.tif --fit-method $args.fit_method -b $args.box_size --gradient $args.min_gradient
 
     # %%
-    irm_locs, irm_info = io.load_locs(output_path + "irm_padded_locs.hdf5")
-    wt_locs, wt_info = io.load_locs(output_path + "wt_padded_locs.hdf5")
+
+    irm_locs_path = output_path + Path(padded_irm_filename).stem + "_locs.hdf5"
+    irm_locs, irm_info = io.load_locs(irm_locs_path)
+    wt_locs_path = output_path + Path(padded_wt_filename).stem + "_locs.hdf5"
+    wt_locs, wt_info = io.load_locs(wt_locs_path)
 
     # %%
     wt_locs = wt_locs[wt_locs["sx"] < args.max_pos_error]
@@ -175,8 +199,8 @@ else:  # if matrix wasnt provided, calculate it
     irm_locs = irm_locs[irm_locs["sx"] < args.max_pos_error]
     irm_locs = irm_locs[irm_locs["sy"] < args.max_pos_error]
     if args.max_photons:
-        wt_locs = wt_locs[wt_locs["photons"] < 1500000]
-        irm_locs = irm_locs[irm_locs["photons"] < 1500000]
+        wt_locs = wt_locs[wt_locs["photons"] < args.max_photons]
+        irm_locs = irm_locs[irm_locs["photons"] < args.max_photons]
 
     wt_locs_xy = wt_locs[["x", "y"]].copy()
     irm_locs_xy = irm_locs[["x", "y"]].copy()
@@ -246,45 +270,56 @@ else:  # if matrix wasnt provided, calculate it
         with open(output_path + "transform_matrix.json", "w") as write_file:
             json.dump(numpyData, write_file, cls=NumpyArrayEncoder)
 
+        # Remove files created during localization
+        os.remove(wt_locs_path)
+        os.remove(irm_locs_path)
+        os.remove(output_path + Path(wt_locs_path).stem + ".yaml")
+        os.remove(output_path + Path(irm_locs_path).stem + ".yaml")
+
         # %%
         # Plot aligned points
         plt.scatter(*zip(*wt_locs_xy), s=5)
         plt.scatter(*zip(*warped_irm_locs), s=5)
         plt.savefig(output_path + "aligned_points.png")
+
+
 # %%
 
 # %%
-if transform_mat != []:  # If I have a matrix either from file or calculated
+if len(transform_mat) != 0:  # If I have a matrix either from file or calculated
     irm_g_padded_warped = warpAffine(
         irm_g_padded, transform_mat, (wt_g_padded.shape[1], wt_g_padded.shape[0])
     )
+
+    # This hack removes the 0s from the affine transform
+    # Otherwise, the 0s make it hard to see because of contrast
+    irm_g_padded_warped[irm_g_padded_warped <= np.amin(irm_g_padded)] = np.mean(
+        irm_g_padded
+    )
+
+    # normalize
+    irm_g_padded_warped = norm_image(irm_g_padded_warped, False)
+    wt_g_padded = norm_image(wt_g_padded)
+
     irm_g_padded_warped_cropped = irm_g_padded_warped[
-        wt_roi[0] : wt_roi[0] + wt_g.shape[0], wt_roi[1] : wt_roi[1] + wt_g.shape[1]
+        0 : wt_g.shape[0], 0 : wt_g.shape[1]
     ]  # crop to size of wt
-    # Save aligned padded images (not currently not used):
-    # tifffile.imwrite("data/output/aligned_irm_padded.tif", irm_g_padded_warped)
-    # tifffile.imwrite("data/output/aligned_wt_padded.tif", wt_g_padded)
 
     tifffile.imwrite(
-        output_path + os.path.basename(irm_path) + "_aligned.tif",
+        output_path + Path(irm_path).stem + "_aligned.tif",
         irm_g_padded_warped_cropped,
         metadata=irm_metadata,
     )  # save irm image without the padding
 
     stacked_image = np.stack(
-        [wt_g, irm_g_padded_warped_cropped], axis=0
+        [wt_g_padded, irm_g_padded_warped_cropped], axis=0
     )  # Save stacked g and irm image
-    tifffile.imwrite(output_path + "multichannel_aligned.tif", stacked_image)
+    tifffile.imwrite(
+        output_path + Path(wt_path).stem + "_multichannel_aligned.tif",
+        stacked_image,
+    )
 
     # %%
-
-    # %%
-    # delete leftover files
-    list_of_output_files = os.listdir(output_path)
-    for file in list_of_output_files:
-        if (
-            file.endswith(".hdf5")
-            or file.endswith(".yaml")
-            or file.endswith("_padded.tif")
-        ):
-            os.remove(os.path.join(output_path, file))
+    # delete padded files
+    os.remove(output_path + padded_irm_filename)
+    os.remove(output_path + padded_wt_filename)
