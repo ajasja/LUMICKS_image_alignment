@@ -324,7 +324,8 @@ if len(transform_mat) != 0:  # If I have a matrix either from file or calculated
     )  # Save stacked g and irm image
     tifffile.imwrite(
         output_path + Path(wt_path).stem + "_multichannel_aligned.tif",
-        stacked_image,
+        np.float32(stacked_image),
+        imagej=True,
     )
 
     # %%
