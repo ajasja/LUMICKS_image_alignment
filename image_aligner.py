@@ -19,6 +19,7 @@ import argparse
 import itertools
 import math
 import subprocess
+import shutil
 
 
 def norm_image(image, inverse=False):
@@ -94,6 +95,13 @@ output_path = (
 # Check if the directory already exists
 os.makedirs(output_path, exist_ok=True)
 # %%
+
+# Copy input files to output folder
+shutil.copy2(irm_path, output_path + os.path.basename(irm_path))
+shutil.copy2(wt_path, output_path + os.path.basename(wt_path))
+
+irm_path = output_path + os.path.basename(irm_path)
+wt_path = output_path + os.path.basename(wt_path)
 
 # rename tiff to tif files
 if irm_path.endswith(".tiff"):
@@ -292,8 +300,6 @@ else:  # if matrix wasnt provided, calculate it
 
 
 # %%
-
-# %%
 if len(transform_mat) != 0:  # If I have a matrix either from file or calculated
     irm_g_padded_warped = warpAffine(
         irm_g_padded, transform_mat, (wt_g_padded.shape[1], wt_g_padded.shape[0])
@@ -329,9 +335,11 @@ if len(transform_mat) != 0:  # If I have a matrix either from file or calculated
     )
 
     # %%
-    # delete padded files
-
     if args.delete_temp_files:
         # delete leftover files
         os.remove(output_path + padded_irm_filename)
         os.remove(output_path + padded_wt_filename)
+        irm._src.close()  # need to close the file before deleting
+        wt._src.close()  # need to close the file before deleting
+        os.remove(irm_path)
+        os.remove(wt_path)
