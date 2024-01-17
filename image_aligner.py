@@ -225,9 +225,9 @@ else:  # if matrix wasnt provided, calculate it
     ):  # If number of points is different after filtering give an error an exit
         print(
             "Different number of spots after filtering (wt: "
-            + len(wt_locs_xy)
+            + str(len(wt_locs_xy))
             + " vs irm: "
-            + len(irm_locs_xy)
+            + str(len(irm_locs_xy))
             + "). Calculation can't continue"
         )
         print("Check your filtering settings")
