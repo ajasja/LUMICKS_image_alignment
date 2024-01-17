@@ -327,6 +327,9 @@ if len(transform_mat) != 0:  # If I have a matrix either from file or calculated
         output_path + Path(wt_path).stem + "_multichannel_aligned.tif",
         np.float32(stacked_image),
         imagej=True,
+        metadata={
+            "Composite mode": "composite",  # This is what was needed for fiji to open it merged
+        },
     )
 
     # %%
