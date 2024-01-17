@@ -96,22 +96,23 @@ output_path = (
 os.makedirs(output_path, exist_ok=True)
 # %%
 
-# Copy input files to output folder
-shutil.copy2(irm_path, output_path + os.path.basename(irm_path))
-shutil.copy2(wt_path, output_path + os.path.basename(wt_path))
+if not args.transform_matrix:
+    # Copy input files to output folder if calculating new matrix
+    shutil.copy2(irm_path, output_path + os.path.basename(irm_path))
+    shutil.copy2(wt_path, output_path + os.path.basename(wt_path))
 
-irm_path = output_path + os.path.basename(irm_path)
-wt_path = output_path + os.path.basename(wt_path)
+    irm_path = output_path + os.path.basename(irm_path)
+    wt_path = output_path + os.path.basename(wt_path)
 
-# rename tiff to tif files
-if irm_path.endswith(".tiff"):
-    print(irm_path)
-    os.rename(irm_path, irm_path[:-1])
-    irm_path = irm_path[:-1]
-if wt_path.endswith(".tiff"):
-    print(wt_path)
-    os.rename(wt_path, wt_path[:-1])
-    wt_path = wt_path[:-1]
+    # rename tiff to tif files
+    if irm_path.endswith(".tiff"):
+        print(irm_path)
+        os.rename(irm_path, irm_path[:-1])
+        irm_path = irm_path[:-1]
+    if wt_path.endswith(".tiff"):
+        print(wt_path)
+        os.rename(wt_path, wt_path[:-1])
+        wt_path = wt_path[:-1]
 
 # %%
 irm = lk.ImageStack(irm_path)  # Loading a stack.
@@ -135,13 +136,11 @@ irm_g = irm.get_image()
 
 wt_metadata = wt._tiff_image_metadata()
 wt_roi = wt_metadata["Alignment region of interest (x, y, width, height)"]
-print(wt_roi)
 
 irm_metadata = irm._tiff_image_metadata()
 irm_roi = irm_metadata[
     "Region of interest (x, y, width, height)"
 ]  # This is different because the wt was previously aligned I think. Can this cause issues?
-print(irm_roi)
 
 # %%
 # Padding is CANCELED. Once this is all working flawlessly I should fix the code to remove references to padding
@@ -149,15 +148,13 @@ print(irm_roi)
 padded_wt_filename = Path(wt_path).stem + "_padded.tif"
 # wt_g_padded = np.pad(wt_g, [(int(wt_roi[0]), 0), (int(wt_roi[1]), 0)])
 wt_g_padded = wt_g
-
 tifffile.imwrite(output_path + padded_wt_filename, wt_g_padded)
-# plt.imshow(wt_g_padded)
+
 
 padded_irm_filename = Path(irm_path).stem + "_padded.tif"
-irm_g_padded = np.pad(irm_g, [(int(irm_roi[0]), 0), (int(irm_roi[1]), 0)])
+# irm_g_padded = np.pad(irm_g, [(int(irm_roi[0]), 0), (int(irm_roi[1]), 0)])
 irm_g_padded = irm_g
 tifffile.imwrite(output_path + padded_irm_filename, irm_g_padded)
-# plt.imshow(irm_g_padded)
 
 # %%
 
@@ -196,8 +193,6 @@ else:  # if matrix wasnt provided, calculate it
         + str(args.min_gradient)
     )
     subprocess.run(run_string)
-    #!python -m picasso localize {output_path}wt_padded.tif --fit-method $args.fit_method -b  $args.box_size --gradient $args.min_gradient
-    #!python -m picasso localize {output_path}irm_padded.tif --fit-method $args.fit_method -b $args.box_size --gradient $args.min_gradient
 
     # %%
 
@@ -339,7 +334,9 @@ if len(transform_mat) != 0:  # If I have a matrix either from file or calculated
         # delete leftover files
         os.remove(output_path + padded_irm_filename)
         os.remove(output_path + padded_wt_filename)
-        irm._src.close()  # need to close the file before deleting
-        wt._src.close()  # need to close the file before deleting
-        os.remove(irm_path)
-        os.remove(wt_path)
+        if not args.transform_matrix:
+            # If calculating a new matrix, delete the temp files
+            irm._src.close()  # need to close the file before deleting
+            wt._src.close()  # need to close the file before deleting
+            os.remove(irm_path)
+            os.remove(wt_path)
