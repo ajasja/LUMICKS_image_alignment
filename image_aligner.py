@@ -45,6 +45,13 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument("wt_file", help="WT tif file")
 parser.add_argument("irm_file", help="IRM tif file")
+
+parser.add_argument(
+    "-bf",
+    "--bright-field",
+    help="Bright field file (optional)",
+)
+
 parser.add_argument(
     "-o",
     "--output-directory",
@@ -52,8 +59,13 @@ parser.add_argument(
     help="Output directory. Default=output/",
 )
 parser.add_argument(
-    "-m", "--transform-matrix", help="Previously calculated matrix in .json format"
+    "-m", "--transform-matrix", help="Previously calculated matrix for IRM in .json format"
 )
+
+parser.add_argument(
+    "-bfm", "--bf-transform-matrix", help="Previously calculated matrix for brighfield in .json format"
+)
+
 parser.add_argument(
     "-f", "--fit-method", default="lq", help="Fit method for picasso.  Default=lq"
 )
@@ -117,6 +129,14 @@ if not args.transform_matrix:
 # %%
 irm = lk.ImageStack(irm_path)  # Loading a stack.
 wt = lk.ImageStack(wt_path)  # Loading a stack.
+
+if args.bright_field:
+    bright_path = args.bright_field
+    bright_file = lk.ImageStack(bright_path)
+    bright_g = bright_file.get_image(channel="green")
+    bright_metadata = bright_file._tiff_image_metadata()
+
+
 wt.export_tiff(
     output_path + Path(wt_path).stem + "_aligned.tif"
 )  # Save aligned wt stack
@@ -165,6 +185,12 @@ if args.transform_matrix:  # If I have provided a matrix, use that
         decodedArray = json.load(read_file)
         transform_mat = np.asarray(decodedArray["transform_matrix"])
         rmsd = decodedArray["rmsd"]
+
+    if args.bf_transform_matrix:
+        with open(args.bf_transform_matrix, "r") as read_file:
+            decodedArray = json.load(read_file)
+            transform_mat_bf = np.asarray(decodedArray["transform_matrix"])
+            rmsd = decodedArray["rmsd"]
 
 # %%
 else:  # if matrix wasnt provided, calculate it
@@ -299,13 +325,11 @@ if len(transform_mat) != 0:  # If I have a matrix either from file or calculated
     irm_g_padded_warped = warpAffine(
         irm_g_padded, transform_mat, (wt_g_padded.shape[1], wt_g_padded.shape[0])
     )
-
     # This hack removes the 0s from the affine transform
     # Otherwise, the 0s make it hard to see because of contrast
     irm_g_padded_warped[irm_g_padded_warped <= np.amin(irm_g_padded)] = np.mean(
         irm_g_padded
     )
-
     # normalize
     irm_g_padded_warped = norm_image(irm_g_padded_warped, False)
     wt_g_padded = norm_image(wt_g_padded)
@@ -313,24 +337,57 @@ if len(transform_mat) != 0:  # If I have a matrix either from file or calculated
     irm_g_padded_warped_cropped = irm_g_padded_warped[
         0 : wt_g.shape[0], 0 : wt_g.shape[1]
     ]  # crop to size of wt
-
     tifffile.imwrite(
         output_path + Path(irm_path).stem + "_aligned.tif",
         irm_g_padded_warped_cropped,
         metadata=irm_metadata,
     )  # save irm image without the padding
 
-    stacked_image = np.stack(
-        [wt_g_padded, irm_g_padded_warped_cropped], axis=0
-    )  # Save stacked g and irm image
-    tifffile.imwrite(
-        output_path + Path(wt_path).stem + "_multichannel_aligned.tif",
-        np.float32(stacked_image),
-        imagej=True,
-        metadata={
-            "Composite mode": "composite",  # This is what was needed for fiji to open it merged
-        },
-    )
+    if args.bright_field:  # If a brightfield file was provided align that too
+        if args.bf_transform_matrix:
+            bright_g_warped = warpAffine(
+                bright_g, transform_mat_bf, (wt_g_padded.shape[1], wt_g_padded.shape[0])
+            )
+            # This hack removes the 0s from the affine transform
+            # Otherwise, the 0s make it hard to see because of contrast
+            bright_g_warped[bright_g_warped <= np.amin(bright_g)] = np.mean(bright_g)
+            # normalize
+            bright_g_warped = norm_image(bright_g_warped, False)
+            wt_g_padded = norm_image(wt_g_padded)
+
+            bright_g_warped_cropped = bright_g_warped[
+                0 : wt_g.shape[0], 0 : wt_g.shape[1]
+            ]  # crop to size of wt
+            tifffile.imwrite(
+                output_path + Path(bright_path).stem + "_aligned.tif",
+                bright_g_warped_cropped,
+                metadata=bright_metadata,
+            )  # save irm image without the padding
+            stacked_image = np.stack(
+                [wt_g_padded, irm_g_padded_warped_cropped, bright_g_warped_cropped], axis=0
+            )  # Save stacked g and irm image
+            tifffile.imwrite(
+                output_path + Path(wt_path).stem + "_multichannel_aligned.tif",
+                np.float32(stacked_image),
+                imagej=True,
+                metadata={
+                    "Composite mode": "composite",  # This is what was needed for fiji to open it merged
+                },
+            )
+        else:   #If no bf transform matrix
+            print("You also need to provide the brightfield alignment matrix")
+    else:
+        stacked_image = np.stack(
+            [wt_g_padded, irm_g_padded_warped_cropped], axis=0
+        )  # Save stacked g and irm image
+        tifffile.imwrite(
+            output_path + Path(wt_path).stem + "_multichannel_aligned.tif",
+            np.float32(stacked_image),
+            imagej=True,
+            metadata={
+                "Composite mode": "composite",  # This is what was needed for fiji to open it merged
+            },
+        )
 
     # %%
     if args.delete_temp_files:
