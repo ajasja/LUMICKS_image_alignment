@@ -121,10 +121,12 @@ wt.export_tiff(
 # Get channels
 wt_g_video = wt.get_image(channel="green")
 irm_g_video = irm.get_image()
-# wt_r = wt.get_image(channel='red')  #not really used
-# wt_b = wt.get_image(channel='blue') #not really used
+wt_r_video = wt.get_image(channel="red")
+wt_b_video = wt.get_image(channel="blue")
 
 wt_g = wt_g_video[0]
+wt_r = wt_r_video[0]
+wt_b = wt_b_video[0]
 irm_g = irm_g_video[0]
 
 # %%
@@ -134,7 +136,7 @@ wt_metadata = wt._tiff_image_metadata()
 wt_framerate = wt_metadata["Framerate (Hz)"]
 wt_roi = wt_metadata["Region of interest (x, y, width, height)"]
 wt_frame_averaging = wt_metadata["Frame averaging"]
-print(wt_framerate)
+# print(wt_framerate)
 
 irm_metadata = irm._tiff_image_metadata()
 irm_roi = irm_metadata[
@@ -142,40 +144,40 @@ irm_roi = irm_metadata[
 ]  # This is different because the wt was prexviously aligned I think. Can this cause issues?
 irm_framerate = irm_metadata["Framerate (Hz)"]
 irm_frame_averaging = irm_metadata["Frame averaging"]
-print(irm_framerate)
+# print(irm_framerate)
 
 bright_roi = bright_metadata[
     "Region of interest (x, y, width, height)"
 ]  # This is different because the wt was prexviously aligned I think. Can this cause issues?
 bf_framerate = bright_metadata["Framerate (Hz)"]
 bf_frame_averaging = bright_metadata["Frame averaging"]
-print(bright_roi)
+# print(bright_roi)
 
 
 # Pad both images to region of interest
 padded_wt_filename = Path(wt_path).stem + "_padded.tif"
 wt_g_padded = np.pad(wt_g, [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)])
 # wt_g_padded = wt_g
-tifffile.imwrite(output_path + padded_wt_filename, wt_g_padded)
+# tifffile.imwrite(output_path + padded_wt_filename, wt_g_padded)
+
+wt_r_padded = np.pad(wt_r, [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)])
+wt_b_padded = np.pad(wt_b, [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)])
+
 
 padded_irm_filename = Path(irm_path).stem + "_padded.tif"
 irm_g_padded = np.pad(irm_g, [(int(irm_roi[1]), 0), (int(irm_roi[0]), 0)])
 # irm_g_padded = irm_g
-tifffile.imwrite(output_path + padded_irm_filename, irm_g_padded)
+# tifffile.imwrite(output_path + padded_irm_filename, irm_g_padded)
 
 if align_brightfield:
     padded_bright_filename = Path(bright_path).stem + "_padded.tif"
     bright_g_padded = np.pad(
         bright_g, [(int(bright_roi[1]), 0), (int(bright_roi[0]), 0)]
     )
-
     # irm_g_padded = irm_g
-
     # irm_g_padded = np.pad(irm_g, [(int(wt_roi[0]), 0), (int(wt_roi[1]), 0)])
-
     # irm_g_padded = np.pad(irm_g_padded, [(int(wt_roi[0]), 0), (int(wt_roi[1]), 0)])
-
-    tifffile.imwrite(output_path + padded_bright_filename, bright_g_padded)
+    # tifffile.imwrite(output_path + padded_bright_filename, bright_g_padded)
 
 
 # plt.imshow(bright_g_padded, alpha=0.5)
@@ -200,39 +202,29 @@ if use_existing_matrix:  # If I have provided a matrix, use that
         decodedArray = json.load(read_file)
         transform_mat = np.asarray(decodedArray["transform_matrix"])
         rmsd = decodedArray["rmsd"]
-        print(transform_mat)
+        # print(transform_mat)
     if align_brightfield:
         with open(bf_transform_matrix_file, "r") as read_file:
             decodedArray = json.load(read_file)
             bf_transform_mat = np.asarray(decodedArray["transform_matrix"])
-            print(bf_transform_mat)
+            # print(bf_transform_mat)
             rmsd = decodedArray["rmsd"]
 
-# manual_x_offset = 327
-# manual_y_offset = 230
-
-# bf_transform_mat[0][2] = bf_transform_mat[0][2] + manual_x_offset
-# bf_transform_mat[1][2] = bf_transform_mat[1][2] + manual_y_offset
-# print(bf_transform_mat)
 
 # %%
-print(irm_framerate)
+# print(irm_framerate)
 
 real_irm_framerate = irm_framerate / irm_frame_averaging
 real_bf_framerate = bf_framerate / bf_frame_averaging
 real_wt_framerate = wt_framerate / wt_frame_averaging
-for frame_n, frame in enumerate(wt_g_video):
 
-    irm_g_padded_asd = irm_g_video[
-        round(frame_n * real_irm_framerate / real_wt_framerate)
-    ]
-    print(round(frame_n * real_irm_framerate / real_wt_framerate))
 
 # %%
 irm_warped_video = []
 bf_warped_video = []
-wt_video = []
-
+wt_g_out_video = []
+wt_r_out_video = []
+wt_b_out_video = []
 
 if len(transform_mat != 0):  # If I have a matrix either from file or calculated
 
@@ -242,7 +234,9 @@ if len(transform_mat != 0):  # If I have a matrix either from file or calculated
             round(frame_n * real_irm_framerate / real_wt_framerate)
         ]
 
-        wt_g_padded = frame
+        wt_g_padded = frame  # Is this...wrong? I'm not actually padding in the video. Why does this work? Better not touch it
+        wt_r_padded = wt_r_video[frame_n]
+        wt_b_padded = wt_b_video[frame_n]
 
         irm_g_padded_warped = warpAffine(
             irm_g_padded, transform_mat, (wt_g_padded.shape[1], wt_g_padded.shape[0])
@@ -259,8 +253,12 @@ if len(transform_mat != 0):  # If I have a matrix either from file or calculated
         irm_g_padded_warped = norm_image(irm_g_padded_warped, False)
 
         wt_g_padded = norm_image(wt_g_padded)
+        wt_r_padded = norm_image(wt_r_padded)
+        wt_b_padded = norm_image(wt_b_padded)
 
-        wt_video.append(wt_g_padded)
+        wt_g_out_video.append(wt_g_padded)
+        wt_r_out_video.append(wt_r_padded)
+        wt_b_out_video.append(wt_b_padded)
 
         irm_warped_video.append(irm_g_padded_warped)
 
@@ -298,13 +296,32 @@ if len(transform_mat != 0):  # If I have a matrix either from file or calculated
 
     if align_brightfield:
         stacked_video = np.stack(
-            [wt_video, irm_warped_video, bf_warped_video], axis=1
+            [
+                wt_r_out_video,
+                wt_g_out_video,
+                wt_b_out_video,
+                (
+                    [np.empty(wt_g_out_video[0].shape)] * len(wt_g_out_video)
+                ),  # skip gray channel
+                irm_warped_video,
+                bf_warped_video,
+            ],
+            axis=1,
         )  # Save stacked g and irm image
 
     else:
 
         stacked_video = np.stack(
-            [wt_video, irm_warped_video], axis=1
+            [
+                wt_r_out_video,
+                wt_g_out_video,
+                wt_b_out_video,
+                (
+                    [np.empty(wt_g_out_video[0].shape)] * len(wt_g_out_video)
+                ),  # skip gray channel
+                irm_warped_video,
+            ],
+            axis=1,
         )  # Save stacked g and irm image
 
     tifffile.imwrite(
@@ -323,8 +340,3 @@ if len(transform_mat != 0):  # If I have a matrix either from file or calculated
     # os.remove(output_path + padded_irm_filename)
 
     # os.remove(output_path + padded_wt_filename)
-
-# %%
-
-
-# %%

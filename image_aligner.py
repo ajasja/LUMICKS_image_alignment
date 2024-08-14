@@ -189,11 +189,15 @@ irm = lk.ImageStack(irm_path)  # Loading a stack.
 irm_g = irm.get_image()
 irm_metadata = irm._tiff_image_metadata()
 irm_roi = irm_metadata["Region of interest (x, y, width, height)"]
+
 wt = lk.ImageStack(wt_path)  # Loading a stack.
 wt_metadata = wt._tiff_image_metadata()
 wt_roi = wt_metadata["Region of interest (x, y, width, height)"]
 wt_g = wt.get_image(channel="green")
+wt_r = wt.get_image(channel="red")
+wt_b = wt.get_image(channel="blue")
 # plt.imsave(output_path + Path(wt_path).stem + "_wtG.tiff", wt_g)
+
 if align_brightfield:
     bright_file = lk.ImageStack(bright_path)
     bright_g = bright_file.get_image(channel="green")
@@ -210,7 +214,8 @@ fig, ax1 = plt.subplots()
 padded_wt_filename = Path(wt_path).stem + "_padded.tif"
 wt_g_padded = np.pad(wt_g, [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)])
 tifffile.imwrite(output_path + padded_wt_filename, wt_g_padded)
-
+wt_r_padded = np.pad(wt_r, [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)])
+wt_b_padded = np.pad(wt_b, [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)])
 
 padded_irm_filename = Path(irm_path).stem + "_padded.tif"
 irm_g_padded = np.pad(irm_g, [(int(irm_roi[1]), 0), (int(irm_roi[0]), 0)])
@@ -536,7 +541,8 @@ if len(transform_mat != 0):  # If I have a matrix either from file or calculated
     )
     irm_g_padded_warped = norm_image(irm_g_padded_warped)
     wt_g_padded = norm_image(wt_g_padded)
-
+    wt_r_padded = norm_image(wt_r_padded)
+    wt_b_padded = norm_image(wt_b_padded)
     tifffile.imwrite(
         output_path + Path(irm_path).stem + "_aligned.tif",
         irm_g_padded_warped,
@@ -564,7 +570,14 @@ if len(transform_mat != 0):  # If I have a matrix either from file or calculated
             )  # save bf image
 
             stacked_image = np.stack(
-                [wt_g_padded, irm_g_padded_warped, bright_g_padded_warped],
+                [
+                    wt_r_padded,
+                    wt_g_padded,
+                    wt_b_padded,
+                    np.empty(wt_g_padded.shape),
+                    irm_g_padded_warped,
+                    bright_g_padded_warped,
+                ],
                 axis=0,
             )  # Save stacked bf, wt and irm image
             tifffile.imwrite(
@@ -577,7 +590,14 @@ if len(transform_mat != 0):  # If I have a matrix either from file or calculated
             )
     else:
         stacked_image = np.stack(
-            [wt_g_padded, irm_g_padded_warped], axis=0
+            [
+                wt_r_padded,
+                wt_g_padded,
+                wt_b_padded,
+                np.empty(wt_g_padded.shape),
+                irm_g_padded_warped,
+            ],
+            axis=0,
         )  # Save stacked g and irm image
         tifffile.imwrite(
             output_path + Path(wt_path).stem + "_multichannel_aligned.tif",
