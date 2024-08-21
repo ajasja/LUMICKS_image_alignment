@@ -76,6 +76,9 @@ if args.bright_field_file is not None:
             "Error. Bright field file provided but not the bright field matrix. Terminating"
         )
         exit()
+else:
+    align_brightfield = False
+
 
 output_path = (
     args.output_directory + "/"
@@ -98,7 +101,7 @@ if wt_path.endswith(".tiff"):
     os.rename(wt_path, wt_path[:-1])
     wt_path = wt_path[:-1]
 
-if bright_path.endswith(".tiff"):
+if align_brightfield and bright_path.endswith(".tiff"):
     print(f"renaming {bright_path} to .tif")
     os.rename(bright_path, bright_path[:-1])
     bright_path = bright_path[:-1]
@@ -146,12 +149,13 @@ irm_framerate = irm_metadata["Framerate (Hz)"]
 irm_frame_averaging = irm_metadata["Frame averaging"]
 # print(irm_framerate)
 
-bright_roi = bright_metadata[
-    "Region of interest (x, y, width, height)"
-]  # This is different because the wt was prexviously aligned I think. Can this cause issues?
-bf_framerate = bright_metadata["Framerate (Hz)"]
-bf_frame_averaging = bright_metadata["Frame averaging"]
-# print(bright_roi)
+if align_brightfield:
+    bright_roi = bright_metadata[
+        "Region of interest (x, y, width, height)"
+    ]  # This is different because the wt was prexviously aligned I think. Can this cause issues?
+    bf_framerate = bright_metadata["Framerate (Hz)"]
+    bf_frame_averaging = bright_metadata["Frame averaging"]
+    # print(bright_roi)
 
 
 # Pad both images to region of interest
@@ -215,7 +219,8 @@ if use_existing_matrix:  # If I have provided a matrix, use that
 # print(irm_framerate)
 
 real_irm_framerate = irm_framerate / irm_frame_averaging
-real_bf_framerate = bf_framerate / bf_frame_averaging
+if align_brightfield:
+    real_bf_framerate = bf_framerate / bf_frame_averaging
 real_wt_framerate = wt_framerate / wt_frame_averaging
 
 
