@@ -166,7 +166,7 @@ min_gradient_bf = args.brightfield_min_gradient
 
 # Check if the output directory already exists
 os.makedirs(output_path, exist_ok=True)
-
+"""
 if irm_path.endswith(".tiff"):
     print(f"renaming {irm_path} to .tif")
     os.rename(irm_path, irm_path[:-1])
@@ -183,7 +183,7 @@ if args.bright_field_file is not None:
         print(f"renaming {bright_path} to .tif")
         os.rename(bright_path, bright_path[:-1])
         bright_path = bright_path[:-1]
-
+"""
 
 irm = lk.ImageStack(irm_path)  # Loading a stack.
 irm_g = irm.get_image()

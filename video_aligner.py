@@ -92,6 +92,7 @@ use_existing_matrix = True  # always
 os.makedirs(output_path, exist_ok=True)
 
 # %%
+"""
 if irm_path.endswith(".tiff"):
     print(f"renaming {irm_path} to .tif")
     os.rename(irm_path, irm_path[:-1])
@@ -105,7 +106,7 @@ if align_brightfield and bright_path.endswith(".tiff"):
     print(f"renaming {bright_path} to .tif")
     os.rename(bright_path, bright_path[:-1])
     bright_path = bright_path[:-1]
-
+"""
 # %%
 irm = lk.ImageStack(irm_path)  # Loading a stack.
 wt = lk.ImageStack(wt_path)  # Loading a stack.
