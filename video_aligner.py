@@ -24,10 +24,14 @@ import subprocess
 def norm_image(image, inverse=False):
     amin = image.min()
     amax = image.max()
-    if inverse:
-        return 1 - (image - amin) / (amax - amin)
+
+    if amax != amin:
+        if inverse:
+            return 1 - (image - amin) / (amax - amin)
+        else:
+            return (image - amin) / (amax - amin)
     else:
-        return (image - amin) / (amax - amin)
+        return image
 
 
 class NumpyArrayEncoder(JSONEncoder):
@@ -236,43 +240,58 @@ if len(transform_mat != 0):  # If I have a matrix either from file or calculated
 
     for frame_n, frame in enumerate(wt_g_video):
 
-        irm_g_padded = irm_g_video[
-            round(frame_n * real_irm_framerate / real_wt_framerate)
-        ]
-
-        wt_g_padded = frame  # Is this...wrong? I'm not actually padding in the video. Why does this work? Better not touch it
-        wt_r_padded = wt_r_video[frame_n]
-        wt_b_padded = wt_b_video[frame_n]
+        irm_g_padded = np.pad(
+            irm_g_video[round(frame_n * real_irm_framerate / real_wt_framerate)],
+            [(int(irm_roi[1]), 0), (int(irm_roi[0]), 0)],
+        )
+        wt_g_padded = np.pad(frame, [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)])
+        wt_r_padded = np.pad(
+            wt_r_video[frame_n], [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)]
+        )  # I think R and B shouldnt need padding and cropping, but let's just keep everything consistent
+        wt_b_padded = np.pad(
+            wt_b_video[frame_n], [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)]
+        )
 
         irm_g_padded_warped = warpAffine(
             irm_g_padded, transform_mat, (wt_g_padded.shape[1], wt_g_padded.shape[0])
         )
 
         # This hack is done to reduce the total contrast in the resulting image
-
         # Otherwise, the 0s make it hard to see
-
         irm_g_padded_warped[irm_g_padded_warped <= np.amin(irm_g_padded)] = np.mean(
             irm_g_padded
         )
 
-        irm_g_padded_warped = norm_image(irm_g_padded_warped, False)
-
-        wt_g_padded = norm_image(wt_g_padded)
-        wt_r_padded = norm_image(wt_r_padded)
-        wt_b_padded = norm_image(wt_b_padded)
+        irm_g_padded_warped = norm_image(irm_g_padded_warped)[
+            int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
+            int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
+        ]
+        wt_g_padded = norm_image(wt_g_padded)[
+            int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
+            int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
+        ]
+        wt_r_padded = norm_image(wt_r_padded)[
+            int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
+            int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
+        ]
+        wt_b_padded = norm_image(wt_b_padded)[
+            int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
+            int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
+        ]
 
         wt_g_out_video.append(wt_g_padded)
         wt_r_out_video.append(wt_r_padded)
         wt_b_out_video.append(wt_b_padded)
-
         irm_warped_video.append(irm_g_padded_warped)
 
         if align_brightfield:
             if len(bf_transform_mat) != 0:
-                bf_g_padded = bright_g_video[
-                    round(frame_n * real_bf_framerate / real_wt_framerate)
-                ]
+                bf_g_padded = np.pad(
+                    bright_g_video[
+                        round(frame_n * real_bf_framerate / real_wt_framerate)
+                    ],
+                    [(int(bright_roi[1]), 0), (int(bright_roi[0]), 0)],
+                )
 
                 bf_g_padded_warped = warpAffine(
                     bf_g_padded,
