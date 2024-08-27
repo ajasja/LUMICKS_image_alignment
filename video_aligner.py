@@ -237,7 +237,7 @@ wt_r_out_video = []
 wt_b_out_video = []
 
 if len(transform_mat != 0):  # If I have a matrix either from file or calculated
-
+    print("Starting video alignment")
     for frame_n, frame in enumerate(wt_g_video):
 
         irm_g_padded = np.pad(
@@ -245,12 +245,14 @@ if len(transform_mat != 0):  # If I have a matrix either from file or calculated
             [(int(irm_roi[1]), 0), (int(irm_roi[0]), 0)],
         )
         wt_g_padded = np.pad(frame, [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)])
-        wt_r_padded = np.pad(
-            wt_r_video[frame_n], [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)]
-        )  # I think R and B shouldnt need padding and cropping, but let's just keep everything consistent
-        wt_b_padded = np.pad(
-            wt_b_video[frame_n], [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)]
-        )
+        # wt_r_padded = np.pad(
+        #    wt_r_video[frame_n], [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)]
+        # )  # I think R and B shouldnt need padding and cropping, but let's just keep everything consistent
+        # wt_b_padded = np.pad(
+        #    wt_b_video[frame_n], [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)]
+        # )
+        wt_r_padded = wt_r_video[frame_n]
+        wt_b_padded = wt_b_video[frame_n]
 
         irm_g_padded_warped = warpAffine(
             irm_g_padded, transform_mat, (wt_g_padded.shape[1], wt_g_padded.shape[0])
@@ -270,14 +272,14 @@ if len(transform_mat != 0):  # If I have a matrix either from file or calculated
             int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
             int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
         ]
-        wt_r_padded = norm_image(wt_r_padded)[
-            int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
-            int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
-        ]
-        wt_b_padded = norm_image(wt_b_padded)[
-            int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
-            int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
-        ]
+        wt_r_padded = norm_image(wt_r_padded)  # [
+        # int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
+        # int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
+        # ]
+        wt_b_padded = norm_image(wt_b_padded)  # [
+        # int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
+        # int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
+        # ]
 
         wt_g_out_video.append(wt_g_padded)
         wt_r_out_video.append(wt_r_padded)
