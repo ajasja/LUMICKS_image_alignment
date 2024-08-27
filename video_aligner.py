@@ -262,19 +262,19 @@ if len(transform_mat != 0):  # If I have a matrix either from file or calculated
             irm_g_padded
         )
 
-        irm_g_padded_warped = norm_image(irm_g_padded_warped)[
+        irm_g_padded_warped = irm_g_padded_warped[
             int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
             int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
         ]
-        wt_g_padded = norm_image(wt_g_padded)[
+        wt_g_padded = wt_g_padded[
             int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
             int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
         ]
-        wt_r_padded = norm_image(wt_r_padded)[
+        wt_r_padded = wt_r_padded[
             int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
             int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
         ]
-        wt_b_padded = norm_image(wt_b_padded)[
+        wt_b_padded = wt_b_padded[
             int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
             int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
         ]
@@ -325,9 +325,6 @@ if len(transform_mat != 0):  # If I have a matrix either from file or calculated
                 wt_r_out_video,
                 wt_g_out_video,
                 wt_b_out_video,
-                (
-                    [np.empty(wt_g_out_video[0].shape)] * len(wt_g_out_video)
-                ),  # skip gray channel
                 irm_warped_video,
                 bf_warped_video,
             ],
@@ -341,9 +338,6 @@ if len(transform_mat != 0):  # If I have a matrix either from file or calculated
                 wt_r_out_video,
                 wt_g_out_video,
                 wt_b_out_video,
-                (
-                    [np.empty(wt_g_out_video[0].shape)] * len(wt_g_out_video)
-                ),  # skip gray channel
                 irm_warped_video,
             ],
             axis=1,
@@ -365,3 +359,7 @@ if len(transform_mat != 0):  # If I have a matrix either from file or calculated
     # os.remove(output_path + padded_irm_filename)
 
     # os.remove(output_path + padded_wt_filename)
+    '''
+    (
+                    [np.empty(wt_g_out_video[0].shape)] * len(wt_g_out_video)
+                ),  # skip gray channel'''
