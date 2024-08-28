@@ -66,7 +66,16 @@ parser.add_argument(
     default="output",
     help="Output directory. Default=output/",
 )
+parser.add_argument(
+    "-n", "--normalize", default=False, action=argparse.BooleanOptionalAction
+)
+parser.add_argument(
+    "-ec", "--empty-channel", default=False, action=argparse.BooleanOptionalAction
+)
 args = parser.parse_args()
+
+normalize = args.normalize
+include_empty_channel = args.empty_channel
 
 irm_path = args.irm_file
 wt_path = args.wt_file
@@ -121,9 +130,9 @@ if align_brightfield:
     bright_g = bright_g_video[0]
     bright_metadata = bright_file._tiff_image_metadata()
 
-wt.export_tiff(
-    output_path + Path(wt_path).stem + "_aligned.tif"
-)  # Save aligned wt stack
+# wt.export_tiff(
+#    output_path + Path(wt_path).stem + "_aligned.tif"
+# )  # Save aligned wt stack
 
 # %%
 # Get channels
@@ -132,10 +141,10 @@ irm_g_video = irm.get_image()
 wt_r_video = wt.get_image(channel="red")
 wt_b_video = wt.get_image(channel="blue")
 
-wt_g = wt_g_video[0]
-wt_r = wt_r_video[0]
-wt_b = wt_b_video[0]
-irm_g = irm_g_video[0]
+# wt_g = wt_g_video[0]
+# wt_r = wt_r_video[0]
+# wt_b = wt_b_video[0]
+# irm_g = irm_g_video[0]
 
 # %%
 # Get metadata
@@ -144,6 +153,7 @@ wt_metadata = wt._tiff_image_metadata()
 wt_framerate = wt_metadata["Framerate (Hz)"]
 wt_roi = wt_metadata["Region of interest (x, y, width, height)"]
 wt_frame_averaging = wt_metadata["Frame averaging"]
+real_wt_framerate = wt_framerate / wt_frame_averaging
 # print(wt_framerate)
 
 irm_metadata = irm._tiff_image_metadata()
@@ -152,6 +162,7 @@ irm_roi = irm_metadata[
 ]  # This is different because the wt was prexviously aligned I think. Can this cause issues?
 irm_framerate = irm_metadata["Framerate (Hz)"]
 irm_frame_averaging = irm_metadata["Frame averaging"]
+real_irm_framerate = irm_framerate / irm_frame_averaging
 # print(irm_framerate)
 
 if align_brightfield:
@@ -160,9 +171,11 @@ if align_brightfield:
     ]  # This is different because the wt was prexviously aligned I think. Can this cause issues?
     bf_framerate = bright_metadata["Framerate (Hz)"]
     bf_frame_averaging = bright_metadata["Frame averaging"]
+    real_bf_framerate = bf_framerate / bf_frame_averaging
     # print(bright_roi)
 
 
+"""
 # Pad both images to region of interest
 padded_wt_filename = Path(wt_path).stem + "_padded.tif"
 wt_g_padded = np.pad(wt_g, [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)])
@@ -200,6 +213,7 @@ if align_brightfield:
 # ax1.imshow(bright_g_padded, alpha=0.5)
 # ax1.set_xlim(bright_roi[0], bright_roi[0] + bright_roi[2])
 # ax1.set_ylim(bright_roi[1], bright_roi[1] + bright_roi[3])
+"""
 
 # %%
 transform_mat = []  # set to empty to check afterwards if I have a matrix
@@ -223,11 +237,6 @@ if use_existing_matrix:  # If I have provided a matrix, use that
 # %%
 # print(irm_framerate)
 
-real_irm_framerate = irm_framerate / irm_frame_averaging
-if align_brightfield:
-    real_bf_framerate = bf_framerate / bf_frame_averaging
-real_wt_framerate = wt_framerate / wt_frame_averaging
-
 
 # %%
 irm_warped_video = []
@@ -237,120 +246,149 @@ wt_r_out_video = []
 wt_b_out_video = []
 
 if len(transform_mat != 0):  # If I have a matrix either from file or calculated
+    with tifffile.TiffWriter(
+        output_path + Path(wt_path).stem + "_multichannel_aligned.tif", imagej=True
+    ) as tif:
 
-    for frame_n, frame in enumerate(wt_g_video):
+        for frame_n, frame in enumerate(wt_g_video):
 
-        irm_g_padded = np.pad(
-            irm_g_video[round(frame_n * real_irm_framerate / real_wt_framerate)],
-            [(int(irm_roi[1]), 0), (int(irm_roi[0]), 0)],
-        )
-        wt_g_padded = np.pad(frame, [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)])
-        wt_r_padded = np.pad(
-            wt_r_video[frame_n], [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)]
-        )  # I think R and B shouldnt need padding and cropping, but let's just keep everything consistent
-        wt_b_padded = np.pad(
-            wt_b_video[frame_n], [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)]
-        )
+            irm_g_padded = np.pad(
+                irm_g_video[round(frame_n * real_irm_framerate / real_wt_framerate)],
+                [(int(irm_roi[1]), 0), (int(irm_roi[0]), 0)],
+            )
+            wt_g_padded = np.pad(frame, [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)])
+            wt_r_padded = np.pad(
+                wt_r_video[frame_n], [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)]
+            )  # I think R and B shouldnt need padding and cropping, but let's just keep everything consistent
+            wt_b_padded = np.pad(
+                wt_b_video[frame_n], [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)]
+            )
 
-        irm_g_padded_warped = warpAffine(
-            irm_g_padded, transform_mat, (wt_g_padded.shape[1], wt_g_padded.shape[0])
-        )
+            irm_g_padded_warped = warpAffine(
+                irm_g_padded,
+                transform_mat,
+                (wt_g_padded.shape[1], wt_g_padded.shape[0]),
+            )
 
-        # This hack is done to reduce the total contrast in the resulting image
-        # Otherwise, the 0s make it hard to see
-        irm_g_padded_warped[irm_g_padded_warped <= np.amin(irm_g_padded)] = np.mean(
-            irm_g_padded
-        )
+            # This hack is done to reduce the total contrast in the resulting image
+            # Otherwise, the 0s make it hard to see
+            irm_g_padded_warped[irm_g_padded_warped <= np.amin(irm_g_padded)] = np.mean(
+                irm_g_padded
+            )
 
-        irm_g_padded_warped = irm_g_padded_warped[
-            int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
-            int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
-        ]
-        wt_g_padded = wt_g_padded[
-            int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
-            int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
-        ]
-        wt_r_padded = wt_r_padded[
-            int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
-            int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
-        ]
-        wt_b_padded = wt_b_padded[
-            int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
-            int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
-        ]
+            if normalize:
+                irm_g_padded_warped = norm_image(irm_g_padded_warped)
+                wt_r_padded = norm_image(wt_r_padded)
+                wt_g_padded = norm_image(wt_g_padded)
+                wt_b_padded = norm_image(wt_b_padded)
 
-        wt_g_out_video.append(wt_g_padded)
-        wt_r_out_video.append(wt_r_padded)
-        wt_b_out_video.append(wt_b_padded)
-        irm_warped_video.append(irm_g_padded_warped)
+            irm_g_padded_warped = irm_g_padded_warped[
+                int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
+                int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
+            ]
 
+            if align_brightfield:
+                if len(bf_transform_mat) != 0:
+                    bf_g_padded = np.pad(
+                        bright_g_video[
+                            round(frame_n * real_bf_framerate / real_wt_framerate)
+                        ],
+                        [(int(bright_roi[1]), 0), (int(bright_roi[0]), 0)],
+                    )
+
+                    bf_g_padded_warped = warpAffine(
+                        bf_g_padded,
+                        bf_transform_mat,
+                        (wt_g_padded.shape[1], wt_g_padded.shape[0]),
+                    )
+
+                    # This hack is done to reduce the total contrast in the resulting image
+                    # Otherwise, the 0s make it hard to see
+
+                    bf_g_padded_warped[bf_g_padded_warped <= np.amin(bf_g_padded)] = (
+                        np.mean(bf_g_padded)
+                    )
+
+                    if normalize:
+                        bf_g_padded_warped = norm_image(bf_g_padded_warped, False)
+
+                    bf_g_padded_warped = bf_g_padded_warped[
+                        int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
+                        int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
+                    ]
+
+                    # bf_warped_video.append(bf_g_padded_warped)
+
+            wt_g_padded = wt_g_padded[
+                int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
+                int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
+            ]
+            wt_r_padded = wt_r_padded[
+                int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
+                int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
+            ]
+            wt_b_padded = wt_b_padded[
+                int(wt_roi[1]) : int(wt_roi[1]) + int(wt_roi[3]),
+                int(wt_roi[0]) : int(wt_roi[0]) + int(wt_roi[2]),
+            ]
+            channels = [wt_r_padded, wt_g_padded, wt_b_padded]
+
+            if include_empty_channel:
+                channels.append(np.empty(wt_g_padded.shape))
+
+            channels.append(irm_g_padded_warped)
+
+            if align_brightfield:
+                channels.append(bf_g_padded_warped)
+
+            stacked_frame = np.stack(channels, axis=0)
+            tif.write(
+                stacked_frame.astype(np.float32),
+                metadata={"Composite mode": "composite"},
+                contiguous=True,
+            )
+            # wt_g_out_video.append(wt_g_padded)
+            # wt_r_out_video.append(wt_r_padded)
+            # wt_b_out_video.append(wt_b_padded)
+            # irm_warped_video.append(irm_g_padded_warped)
+
+        """
         if align_brightfield:
-            if len(bf_transform_mat) != 0:
-                bf_g_padded = np.pad(
-                    bright_g_video[
-                        round(frame_n * real_bf_framerate / real_wt_framerate)
-                    ],
-                    [(int(bright_roi[1]), 0), (int(bright_roi[0]), 0)],
-                )
+            stacked_video = np.stack(
+                [
+                    wt_r_out_video,
+                    wt_g_out_video,
+                    wt_b_out_video,
+                    (
+                        [np.empty(wt_g_out_video[0].shape)] * len(wt_g_out_video)
+                    ),  # skip gray channel
+                    irm_warped_video,
+                    bf_warped_video,
+                ],
+                axis=1,
+            )  # Save stacked g and irm image
+        else:
+            stacked_video = np.stack(
+                [
+                    wt_r_out_video,
+                    wt_g_out_video,
+                    wt_b_out_video,
+                    (
+                        [np.empty(wt_g_out_video[0].shape)] * len(wt_g_out_video)
+                    ),  # skip gray channel
+                    irm_warped_video,
+                ],
+                axis=1,
+            )
 
-                bf_g_padded_warped = warpAffine(
-                    bf_g_padded,
-                    bf_transform_mat,
-                    (wt_g_padded.shape[1], wt_g_padded.shape[0]),
-                )
-
-                # This hack is done to reduce the total contrast in the resulting image
-                # Otherwise, the 0s make it hard to see
-
-                bf_g_padded_warped[bf_g_padded_warped <= np.amin(bf_g_padded)] = (
-                    np.mean(bf_g_padded)
-                )
-
-                bf_g_padded_warped = norm_image(bf_g_padded_warped, False)
-                bf_warped_video.append(bf_g_padded_warped)
-
-        # tifffile.imwrite(
-        # output_path + Path(irm_path).stem + f"_aligned_{frame_n}.tif",
-        # irm_g_padded_warped_cropped,
-
-        # metadata=irm_metadata,
-
-        # )  # save irm image without the padding
-        # plt.imshow(irm_g_padded, alpha=0.5)
-        # plt.imshow(bf_g_padded_warped, alpha=0.5, cmap="Blues")
-
-    if align_brightfield:
-        stacked_video = np.stack(
-            [
-                wt_r_out_video,
-                wt_g_out_video,
-                wt_b_out_video,
-                irm_warped_video,
-                bf_warped_video,
-            ],
-            axis=1,
-        )  # Save stacked g and irm image
-
-    else:
-
-        stacked_video = np.stack(
-            [
-                wt_r_out_video,
-                wt_g_out_video,
-                wt_b_out_video,
-                irm_warped_video,
-            ],
-            axis=1,
-        )  # Save stacked g and irm image
-
-    tifffile.imwrite(
+        tifffile.imwrite(
         output_path + Path(wt_path).stem + "_multichannel_aligned.tif",
         np.float32(stacked_video),
         imagej=True,
         metadata={
             "Composite mode": "composite",  # This is what was needed for fiji to open it merged
         },
-    )
+        )"""
 
     # plt.imshow(wt_g)
 
@@ -359,7 +397,3 @@ if len(transform_mat != 0):  # If I have a matrix either from file or calculated
     # os.remove(output_path + padded_irm_filename)
 
     # os.remove(output_path + padded_wt_filename)
-    """
-    (
-                    [np.empty(wt_g_out_video[0].shape)] * len(wt_g_out_video)
-                ),  # skip gray channel"""
