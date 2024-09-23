@@ -67,16 +67,31 @@ parser.add_argument(
     help="Output directory. Default=output/",
 )
 parser.add_argument(
-    "-n", "--normalize", default=False, action=argparse.BooleanOptionalAction
+    "-n",
+    "--normalize",
+    default=False,
+    action=argparse.BooleanOptionalAction,
+    help="Normalize channels",
 )
 parser.add_argument(
-    "-ec", "--empty-channel", default=False, action=argparse.BooleanOptionalAction
+    "-ec",
+    "--empty-channel",
+    default=False,
+    action=argparse.BooleanOptionalAction,
+    help="Add empty channel in gray",
+)
+parser.add_argument(
+    "-if",
+    "--ignore-framerate",
+    default=False,
+    action=argparse.BooleanOptionalAction,
+    help="Some files have problems with framerates. This might solve it.",
 )
 args = parser.parse_args()
 
 normalize = args.normalize
 include_empty_channel = args.empty_channel
-
+ignore_framerate = args.ignore_framerate
 irm_path = args.irm_file
 wt_path = args.wt_file
 if args.bright_field_file is not None:
@@ -173,6 +188,10 @@ if align_brightfield:
     bf_frame_averaging = bright_metadata["Frame averaging"]
     real_bf_framerate = bf_framerate / bf_frame_averaging
     # print(bright_roi)
+
+if ignore_framerate:
+    real_irm_framerate = real_wt_framerate
+    real_bf_framerate = real_wt_framerate
 
 
 """
