@@ -271,23 +271,23 @@ if not use_existing_irm_matrix:  # if matrix wasnt provided, calculate it
 # Calculate new Matrix
 if not use_existing_irm_matrix:
     # These parameters are for filtering based on position. Very useful if IRM, WT and brightfield have different number of spots laying around
-    irm_min_x = 0  # 370
-    irm_min_y = 0  # 392
-    irm_max_x = 100000000
-    irm_max_y = 100000000
-    wt_min_x = 0  # 28
-    wt_min_y = 0  # 745
+    irm_min_x = 33 +110 # 370
+    irm_min_y = 2 +134 # 392
+    irm_max_x = 234+110
+    irm_max_y = 156+134
+    wt_min_x = 16+833  # 28
+    wt_min_y = 0+229  # 745
     wt_max_x = 100000000
-    wt_max_y = 100000000
+    wt_max_y = 157+229
 
     irm_locs_path = output_path + Path(padded_irm_filename).stem + "_locs.hdf5"
     irm_locs, irm_info = io.load_locs(irm_locs_path)
     wt_locs_path = output_path + Path(padded_wt_filename).stem + "_locs.hdf5"
     wt_locs, wt_info = io.load_locs(wt_locs_path)
-    wt_locs = wt_locs[wt_locs["sx"] < max_pos_error]
-    wt_locs = wt_locs[wt_locs["sy"] < max_pos_error]
-    irm_locs = irm_locs[irm_locs["sx"] < max_pos_error]
-    irm_locs = irm_locs[irm_locs["sy"] < max_pos_error]
+    #wt_locs = wt_locs[wt_locs["sx"] < max_pos_error]
+    #wt_locs = wt_locs[wt_locs["sy"] < max_pos_error]
+    #irm_locs = irm_locs[irm_locs["sx"] < max_pos_error]
+    #irm_locs = irm_locs[irm_locs["sy"] < max_pos_error]
     irm_locs = irm_locs[irm_locs["x"] > irm_min_x]
     irm_locs = irm_locs[irm_locs["y"] > irm_min_y]
     irm_locs = irm_locs[irm_locs["x"] < irm_max_x]

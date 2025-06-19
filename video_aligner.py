@@ -348,7 +348,7 @@ if len(transform_mat != 0):  # If I have a matrix either from file or calculated
 
                 stacked_frame = np.stack(channels, axis=0)
                 tif.write(
-                    stacked_frame.astype(np.float32),
+                    stacked_frame.astype(np.uint16),
                     metadata={"Composite mode": "composite"},
                     contiguous=True,
                 )
