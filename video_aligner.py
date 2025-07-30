@@ -120,22 +120,6 @@ use_existing_matrix = True  # always
 os.makedirs(output_path, exist_ok=True)
 
 # %%
-"""
-if irm_path.endswith(".tiff"):
-    print(f"renaming {irm_path} to .tif")
-    os.rename(irm_path, irm_path[:-1])
-    irm_path = irm_path[:-1]
-if wt_path.endswith(".tiff"):
-    print(f"renaming {wt_path} to .tif")
-    os.rename(wt_path, wt_path[:-1])
-    wt_path = wt_path[:-1]
-
-if align_brightfield and bright_path.endswith(".tiff"):
-    print(f"renaming {bright_path} to .tif")
-    os.rename(bright_path, bright_path[:-1])
-    bright_path = bright_path[:-1]
-"""
-# %%
 irm = lk.ImageStack(irm_path)  # Loading a stack.
 wt = lk.ImageStack(wt_path)  # Loading a stack.
 
@@ -172,18 +156,14 @@ real_wt_framerate = wt_framerate / wt_frame_averaging
 # print(wt_framerate)
 
 irm_metadata = irm._tiff_image_metadata()
-irm_roi = irm_metadata[
-    "Region of interest (x, y, width, height)"
-]  # This is different because the wt was prexviously aligned I think. Can this cause issues?
+irm_roi = irm_metadata["Region of interest (x, y, width, height)"]
 irm_framerate = irm_metadata["Framerate (Hz)"]
 irm_frame_averaging = irm_metadata["Frame averaging"]
 real_irm_framerate = irm_framerate / irm_frame_averaging
 # print(irm_framerate)
 
 if align_brightfield:
-    bright_roi = bright_metadata[
-        "Region of interest (x, y, width, height)"
-    ]  # This is different because the wt was prexviously aligned I think. Can this cause issues?
+    bright_roi = bright_metadata["Region of interest (x, y, width, height)"]
     bf_framerate = bright_metadata["Framerate (Hz)"]
     bf_frame_averaging = bright_metadata["Frame averaging"]
     real_bf_framerate = bf_framerate / bf_frame_averaging
@@ -193,46 +173,6 @@ if ignore_framerate:
     real_irm_framerate = real_wt_framerate
     real_bf_framerate = real_wt_framerate
 
-
-"""
-# Pad both images to region of interest
-padded_wt_filename = Path(wt_path).stem + "_padded.tif"
-wt_g_padded = np.pad(wt_g, [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)])
-# wt_g_padded = wt_g
-# tifffile.imwrite(output_path + padded_wt_filename, wt_g_padded)
-
-wt_r_padded = np.pad(wt_r, [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)])
-wt_b_padded = np.pad(wt_b, [(int(wt_roi[1]), 0), (int(wt_roi[0]), 0)])
-
-
-padded_irm_filename = Path(irm_path).stem + "_padded.tif"
-irm_g_padded = np.pad(irm_g, [(int(irm_roi[1]), 0), (int(irm_roi[0]), 0)])
-# irm_g_padded = irm_g
-# tifffile.imwrite(output_path + padded_irm_filename, irm_g_padded)
-
-if align_brightfield:
-    padded_bright_filename = Path(bright_path).stem + "_padded.tif"
-    bright_g_padded = np.pad(
-        bright_g, [(int(bright_roi[1]), 0), (int(bright_roi[0]), 0)]
-    )
-    # irm_g_padded = irm_g
-    # irm_g_padded = np.pad(irm_g, [(int(wt_roi[0]), 0), (int(wt_roi[1]), 0)])
-    # irm_g_padded = np.pad(irm_g_padded, [(int(wt_roi[0]), 0), (int(wt_roi[1]), 0)])
-    # tifffile.imwrite(output_path + padded_bright_filename, bright_g_padded)
-
-
-# plt.imshow(bright_g_padded, alpha=0.5)
-
-
-# ax1.imshow(irm_g_padded, alpha=0.5)
-# ax1.set_xlim(irm_roi[0], irm_roi[0] + irm_roi[2])
-# ax1.set_ylim(irm_roi[1], irm_roi[1] + irm_roi[3])
-
-
-# ax1.imshow(bright_g_padded, alpha=0.5)
-# ax1.set_xlim(bright_roi[0], bright_roi[0] + bright_roi[2])
-# ax1.set_ylim(bright_roi[1], bright_roi[1] + bright_roi[3])
-"""
 
 # %%
 transform_mat = []  # set to empty to check afterwards if I have a matrix
@@ -251,11 +191,6 @@ if use_existing_matrix:  # If I have provided a matrix, use that
             bf_transform_mat = np.asarray(decodedArray["transform_matrix"])
             # print(bf_transform_mat)
             rmsd = decodedArray["rmsd"]
-
-
-# %%
-# print(irm_framerate)
-
 
 # %%
 irm_warped_video = []
@@ -371,53 +306,3 @@ if len(transform_mat != 0):  # If I have a matrix either from file or calculated
                     metadata={"Composite mode": "composite"},
                     contiguous=True,
                 )
-            # wt_g_out_video.append(wt_g_padded)
-            # wt_r_out_video.append(wt_r_padded)
-            # wt_b_out_video.append(wt_b_padded)
-            # irm_warped_video.append(irm_g_padded_warped)
-
-        """
-        if align_brightfield:
-            stacked_video = np.stack(
-                [
-                    wt_r_out_video,
-                    wt_g_out_video,
-                    wt_b_out_video,
-                    (
-                        [np.empty(wt_g_out_video[0].shape)] * len(wt_g_out_video)
-                    ),  # skip gray channel
-                    irm_warped_video,
-                    bf_warped_video,
-                ],
-                axis=1,
-            )  # Save stacked g and irm image
-        else:
-            stacked_video = np.stack(
-                [
-                    wt_r_out_video,
-                    wt_g_out_video,
-                    wt_b_out_video,
-                    (
-                        [np.empty(wt_g_out_video[0].shape)] * len(wt_g_out_video)
-                    ),  # skip gray channel
-                    irm_warped_video,
-                ],
-                axis=1,
-            )
-
-        tifffile.imwrite(
-        output_path + Path(wt_path).stem + "_multichannel_aligned.tif",
-        np.float32(stacked_video),
-        imagej=True,
-        metadata={
-            "Composite mode": "composite",  # This is what was needed for fiji to open it merged
-        },
-        )"""
-
-    # plt.imshow(wt_g)
-
-    # delete padded files
-
-    # os.remove(output_path + padded_irm_filename)
-
-    # os.remove(output_path + padded_wt_filename)
