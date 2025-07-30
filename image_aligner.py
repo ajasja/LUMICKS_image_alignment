@@ -159,7 +159,7 @@ else:
 min_gradient = args.min_gradient
 box_size = args.box_size
 fit_method = args.fit_method
-max_pos_error = args.max_pos_error
+max_pos_error = float(args.max_pos_error)
 box_size_bf = args.brightfield_box_size
 min_gradient_bf = args.brightfield_min_gradient
 
