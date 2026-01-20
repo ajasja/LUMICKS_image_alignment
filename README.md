@@ -2,6 +2,13 @@
 
 Scripts and tools to align multi-channel microscopy images from LUMICKS optical tweezers systems based on reference beads. This project provides both command-line tools and Jupyter notebooks for single-image, batch, and video alignment workflows.
 
+## Citation
+
+If you use this code in academic work, please cite the associated publication:
+
+**De-novo design of a random protein walker**
+doi: https://doi.org/10.1101/2025.09.29.677966
+
 ## Overview
 
 The LUMICKS image alignment system calibrates and applies affine transformations to align different imaging channels (WT, IRM, etc.) using reference beads as fiducial markers. The transformation matrix is computed once during calibration and can then be applied to align multiple datasets.
