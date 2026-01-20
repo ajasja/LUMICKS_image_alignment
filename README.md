@@ -47,12 +47,6 @@ The LUMICKS image alignment system calibrates and applies affine transformations
 conda env create --name image_aligner -f image_aligner_env.yml
 ```
 
-Or use the alternative environment file:
-
-```bash
-conda env create --name image_aligner -f ImageAlignerEnv.yml
-```
-
 ### Step 2: Activate Environment
 
 ```bash
