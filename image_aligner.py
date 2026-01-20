@@ -64,12 +64,12 @@ parser.add_argument(
     "-f", "--fit-method", default="lq", help="Fit method for picasso.  Default=lq"
 )
 parser.add_argument(
-    "-b", "--box-size", default=21, help="Box sized for picasso. Default=21"
+    "-b", "--box-size", default=11, help="Box sized for picasso. Default=21"
 )
 parser.add_argument(
     "-g",
     "--min-gradient",
-    default=70000,
+    default=30000,
     help="Minimum gradient for picasso. Default=70000",
 )
 parser.add_argument(
@@ -81,7 +81,7 @@ parser.add_argument(
 parser.add_argument(
     "-bfb",
     "--brightfield-box-size",
-    default=9,
+    default=15,
     help="Box sized for picasso for brightfield. Default=9",
 )
 parser.add_argument(
@@ -159,7 +159,7 @@ else:
 min_gradient = args.min_gradient
 box_size = args.box_size
 fit_method = args.fit_method
-max_pos_error = args.max_pos_error
+max_pos_error = float(args.max_pos_error)
 box_size_bf = args.brightfield_box_size
 min_gradient_bf = args.brightfield_min_gradient
 
@@ -271,23 +271,23 @@ if not use_existing_irm_matrix:  # if matrix wasnt provided, calculate it
 # Calculate new Matrix
 if not use_existing_irm_matrix:
     # These parameters are for filtering based on position. Very useful if IRM, WT and brightfield have different number of spots laying around
-    irm_min_x = 0  # 370
-    irm_min_y = 0  # 392
+    irm_min_x = 225# 370
+    irm_min_y = 155 # 392
     irm_max_x = 100000000
-    irm_max_y = 100000000
+    irm_max_y = 430
     wt_min_x = 0  # 28
-    wt_min_y = 0  # 745
-    wt_max_x = 100000000
-    wt_max_y = 100000000
+    wt_min_y = 0 # 745
+    wt_max_x = 100000
+    wt_max_y = 100000
 
     irm_locs_path = output_path + Path(padded_irm_filename).stem + "_locs.hdf5"
     irm_locs, irm_info = io.load_locs(irm_locs_path)
     wt_locs_path = output_path + Path(padded_wt_filename).stem + "_locs.hdf5"
     wt_locs, wt_info = io.load_locs(wt_locs_path)
-    wt_locs = wt_locs[wt_locs["sx"] < max_pos_error]
-    wt_locs = wt_locs[wt_locs["sy"] < max_pos_error]
-    irm_locs = irm_locs[irm_locs["sx"] < max_pos_error]
-    irm_locs = irm_locs[irm_locs["sy"] < max_pos_error]
+    #wt_locs = wt_locs[wt_locs["sx"] < max_pos_error]
+    #wt_locs = wt_locs[wt_locs["sy"] < max_pos_error]
+    #irm_locs = irm_locs[irm_locs["sx"] < max_pos_error]
+    #irm_locs = irm_locs[irm_locs["sy"] < max_pos_error]
     irm_locs = irm_locs[irm_locs["x"] > irm_min_x]
     irm_locs = irm_locs[irm_locs["y"] > irm_min_y]
     irm_locs = irm_locs[irm_locs["x"] < irm_max_x]
@@ -389,7 +389,7 @@ if not use_existing_irm_matrix:
             json.dump(numpyData, write_file, cls=NumpyArrayEncoder)
 
         # Remove files created during localization
-        if args.delete_temp_files:
+        if args.delete_temp_files == True:
             os.remove(wt_locs_path)
             os.remove(irm_locs_path)
             os.remove(output_path + Path(wt_locs_path).stem + ".yaml")
@@ -504,7 +504,7 @@ if not use_existing_irm_matrix:
                     json.dump(numpyData, write_file, cls=NumpyArrayEncoder)
 
                 # Remove files created during localization
-                if args.delete_temp_files:
+                if args.delete_temp_files == True:
                     os.remove(bf_locs_path)
                     os.remove(output_path + Path(bf_locs_path).stem + ".yaml")
 
@@ -614,7 +614,7 @@ wt._src.close()  # need to close the file before deleting
 if args.bright_field_file is not None:
     bright_file._src.close()
 
-if args.delete_temp_files:
+if args.delete_temp_files == True:
     os.remove(output_path + padded_irm_filename)
     os.remove(output_path + padded_wt_filename)
     if args.bright_field_file is not None:
