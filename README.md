@@ -14,31 +14,6 @@ The LUMICKS image alignment system calibrates and applies affine transformations
 - HDF5 and YAML coordinate format support
 - Configurable transformation matrices
 
-## Project Structure
-
-```
-├── image_aligner.py              # Single image alignment script
-├── video_aligner.py              # Video alignment script
-├── image_aligner.ipynb           # Notebook for image alignment
-├── video_aligner.ipynb           # Notebook for video alignment
-├── Align_folder.ipynb            # Batch alignment notebook
-├── Align_folder_with_brightfield.ipynb
-├── Video_Align_folder.ipynb
-├── Video_Align_folder_with_brightfield.ipynb
-├── Tests.ipynb                   # Testing and calibration notebook
-├── transform_matrix.json         # Current transformation matrix
-├── bf_transform_matrix.json      # Brightfield transformation matrix
-├── image_aligner_env.yml         # Conda environment specification
-├── ImageAlignerEnv.yml           # Alternative environment file
-├── Data/                         # Test and calibration data
-│   ├── 2025-07-30 data for new matrix/
-│   ├── 2025-07-30_calibration_data/
-│   ├── Arvind 20250603/          # Sample datasets
-│   └── Previously_unaligned/
-├── output/                       # Aligned output results
-└── old_matrices/                 # Archive of previous transformation matrices
-```
-
 ## Installation
 
 ### Step 1: Create Conda Environment
