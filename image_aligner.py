@@ -389,7 +389,7 @@ if not use_existing_irm_matrix:
             json.dump(numpyData, write_file, cls=NumpyArrayEncoder)
 
         # Remove files created during localization
-        if args.delete_temp_files:
+        if args.delete_temp_files == True:
             os.remove(wt_locs_path)
             os.remove(irm_locs_path)
             os.remove(output_path + Path(wt_locs_path).stem + ".yaml")
@@ -504,7 +504,7 @@ if not use_existing_irm_matrix:
                     json.dump(numpyData, write_file, cls=NumpyArrayEncoder)
 
                 # Remove files created during localization
-                if args.delete_temp_files:
+                if args.delete_temp_files == True:
                     os.remove(bf_locs_path)
                     os.remove(output_path + Path(bf_locs_path).stem + ".yaml")
 
@@ -614,7 +614,7 @@ wt._src.close()  # need to close the file before deleting
 if args.bright_field_file is not None:
     bright_file._src.close()
 
-if args.delete_temp_files:
+if args.delete_temp_files == True:
     os.remove(output_path + padded_irm_filename)
     os.remove(output_path + padded_wt_filename)
     if args.bright_field_file is not None:
