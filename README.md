@@ -200,7 +200,15 @@ The file is a stack of 4 channels:
 3. Green channel (empty)
 4. IRM channel (track)
 
-The output file can be opened in ImageJ. The movie can be cropped so that it only contains one track (the example output HAS been cropped in order to fit Github size limitations). The contrast of the IRM channel has to be further autoadjusted for the undrifting in the next step to work properly.
+The output file can be opened in ImageJ. The movie can be cropped so that it only contains one track (the example output HAS been cropped in order to fit Github size limitations). The contrast of the IRM channel has to be further autoadjusted for the undrifting in the next step to work properly. In order to autoadjust properly, one should:
+
+1. Crop the stack so that it doesn't include the dark padding in the 4th (IRM) channel
+2. Navigate to the 4th channel
+3. Go to: Image > Adjust > Brightness/Contrast > Auto > Set
+
+After these steps you should be able to clearly discern the track (the track should be bright and the background bright). This is necessary for the undrifting to work correctly.
+
+**IMPORTANT**: Be careful not to save changes to the brightness and contrast settings of the first (walker) channel. You can change the levels for visualization but do not click 'Set'. This will interfere with tracking analysis.
 
 ### Expected runtime
 
